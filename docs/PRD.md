@@ -3,7 +3,7 @@
 | 文档信息 | 内容 |
 |---------|------|
 | 产品名称 | 心屿（Heart Island） |
-| 版本 | v1.0 MVP |
+| 版本 | v1.1 |
 | 状态 | 已上线 |
 | 编写人 | 945466610@qq.com |
 
@@ -13,6 +13,7 @@
 
 | 版本 | 日期 | 修订人 | 修订内容 |
 |------|------|--------|---------|
+| v1.1 | 2026-05-10 | — | 新增分析看板 + PostgreSQL 持久化存储 |
 | v1.0 | 2026-05 | — | 初稿，对应 MVP 第一版已上线功能 |
 
 ---
@@ -89,15 +90,16 @@
 | F4 | 情绪可视化 | P1 | 低 | 在报告页展示情绪分布图 |
 | F5 | 对话管理 | P1 | 中 | 开始对话、结束对话、本地存储 |
 | F6 | AI 主动工具推荐 | P1 | 低 | AI 在回复中根据情绪推荐调节工具 |
+| F7 | 分析看板 | P2 | 中 | 匿名数据汇总，产品管理者查看用户统计 |
 
 ### 3.2 MVP 不做清单
 
 | 功能 | 放弃原因 | 后续规划 |
 |------|---------|---------|
-| 用户登录系统 | MVP 用 localStorage 足够，降低使用门槛 | v2.0 云端存储 |
+| 用户登录系统 | MVP 用 localStorage 足够，降低使用门槛 | — |
 | 社区/论坛 | 偏离"私密倾诉"核心定位 | 不做 |
 | 语音交互 | 技术复杂度高 | v3.0 可能性 |
-| 多语言 | 先验证中文市场 | v2.0 |
+| 多语言 | 先验证中文市场 | — |
 | 独立工具箱页 | 改为 AI 主动推荐，降低使用成本 | 保持现状 |
 | 暗黑模式 | 非核心功能 | v1.5 |
 
@@ -363,6 +365,45 @@ data: [DONE]
 
 ---
 
+### F7: 分析看板
+
+**优先级：** P2 | **复杂度：** 中
+
+**触发条件：** 用户结束对话后自动上报；管理者访问 `/admin.html`
+
+**流程：**
+
+```
+用户结束对话
+    ↓
+前端 POST /api/analytics/save（匿名数据：情绪、强度、标签、消息数）
+    ↓
+后端写入数据库（SQLite 本地 / PostgreSQL 线上）
+    ↓
+管理者访问 /admin.html → GET /api/analytics/dashboard
+    ↓
+展示统计看板
+```
+
+**看板内容：**
+
+- **统计卡片：** 总对话数、独立访客数、平均情绪强度、最常见情绪
+- **情绪分布：** 所有用户情绪的水平条形图
+- **最近对话记录：** 时间、情绪、强度、消息数的明细表
+
+**数据隐私：**
+- 仅存储匿名访客 ID（随机生成），不含用户名、IP 等个人信息
+- 访客 ID 存于 localStorage，首次访问时生成
+
+**数据库自动切换：**
+
+| 环境 | 数据库 | 连接方式 |
+|------|--------|---------|
+| 本地开发 | SQLite | `data/analytics.db` 文件 |
+| Railway 线上 | PostgreSQL | 自动检测 `DATABASE_URL` 环境变量 |
+
+---
+
 ## 5. 非功能需求
 
 ### 5.1 性能
@@ -539,17 +580,25 @@ data: [DONE]
 ```
 [浏览器] ──── HTTP/SSE ────> [Node.js Express Server] ──── HTTPS ────> [DeepSeek API]
     │                              │
-    │ localStorage                  │ .env (API Key)
+    │ localStorage                  ├── .env (API Key)
     │ (xinyu_sessions,             │
-    │  xinyu_analysis)             │
+    │  xinyu_analysis)             ├── SQLite (本地开发)
+    │                              │   data/analytics.db
     │                              │
-    └── 静态文件 ──────────────────┘
-    (public/index.html,
-     styles.css, app.js)
+    │  管理端                       └── PostgreSQL (Railway)
+    │  /admin.html ── GET ───────▶      DATABASE_URL
+    │                 分析看板
+    │                              └── 静态文件
+    │                              (public/index.html,
+    │                               styles.css, app.js, admin.html)
+    │
+    └── 自动上报 (对话结束)
+        POST /api/analytics/save
 
 部署：Railway（Node.js 环境）
 命令：node server.js
 端口：process.env.PORT || 3000
+数据库：自动检测 DATABASE_URL → PostgreSQL，否则 SQLite
 ```
 
 ---

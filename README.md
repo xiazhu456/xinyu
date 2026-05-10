@@ -18,6 +18,9 @@
 ### 🔧 智能工具推荐
 不同于传统工具箱需要用户主动寻找，心屿会根据对话中识别到的情绪状态，**主动推荐** 合适的调节工具（呼吸法、Grounding 练习等）。
 
+### 📊 匿名分析
+所有对话情绪数据自动上报，产品管理者可通过数据看板（`/admin.html`）查看用户情绪分布、使用频率等汇总统计。
+
 ## 🛠️ 技术栈
 
 | 层 | 技术 |
@@ -25,19 +28,26 @@
 | 前端 | HTML + CSS + Vanilla JS |
 | 后端 | Node.js + Express |
 | AI | DeepSeek API（流式输出） |
-| 数据 | localStorage（浏览器本地存储） |
-| 部署 | Railway |
+| 数据 | localStorage + SQLite（本地）/ PostgreSQL（Railway） |
+| 部署 | Railway + GitHub 自动部署 |
 
 ## 🏗️ 项目结构
 
 ```
 xinyu/
 ├── server.js          # Express 后端 + DeepSeek API 集成
+├── db.js              # 数据库模块（SQLite/PostgreSQL 双模式）
 ├── package.json       # 项目配置
 ├── .env               # API Key 配置
 ├── .gitignore
+├── docs/
+│   ├── PRD.md                   # 产品需求文档
+│   └── product-thinking.md      # 产品思考文档
+├── data/
+│   └── analytics.db             # SQLite 数据库（本地开发）
 └── public/
-    ├── index.html     # 主页面
+    ├── index.html     # 主页面（倾诉 + 报告）
+    ├── admin.html     # 分析看板（数据统计）
     ├── styles.css     # 温暖治愈风格样式
     └── app.js         # 前端交互逻辑
 ```
