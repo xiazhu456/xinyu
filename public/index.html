@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心屿 · 你的情绪树洞</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ========== 顶部导航 ========== -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-icon">🏝️</span>
+      <h1>心屿</h1>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="chat">💬 倾诉</button>
+      <button class="tab" data-tab="report">🧠 你的岛屿人格</button>
+    </nav>
+  </header>
+
+  <!-- ========== 主内容 ========== -->
+  <main class="main">
+
+    <!-- ===== 倾诉 (聊天) ===== -->
+    <section id="tab-chat" class="tab-content active">
+      <div class="chat-container">
+        <div class="messages" id="messages">
+          <div class="message ai">
+            <div class="avatar">🏝️</div>
+            <div class="bubble">
+              <p>你好，我是心屿 🌿</p>
+              <p>把你的心事说给我听吧——那些烦恼、困惑、不为人知的情绪，都可以。我在这里，安安静静地听。</p>
+              <p>每一次倾诉，都让我更懂你一些。你的性格、你的情绪脉络、你面对世界的方式……慢慢地，我给的建议就不再是泛泛之谈，而是真正贴着你的心长的。</p>
+              <p class="soft-text">说说吧，今天怎么了？🌸</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="emotion-bar" id="emotionBar" style="display:none">
+          <span>当前对话情绪：</span>
+          <span id="currentEmotion">—</span>
+        </div>
+
+        <div class="input-area">
+          <div class="input-wrapper">
+            <textarea id="userInput" rows="1" placeholder="说说你此刻的心情…"></textarea>
+            <button class="send-btn" id="sendBtn" disabled>发送</button>
+          </div>
+          <div class="input-tips">
+            <span class="tip">按 Enter 发送 · Shift+Enter 换行</span>
+            <button class="btn-end" id="endChatBtn" style="display:none">🌊 完成本次倾诉</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 你的岛屿人格 ===== -->
+    <section id="tab-report" class="tab-content">
+      <div class="report-container">
+        <h2>🧠 你的岛屿人格</h2>
+        <p class="soft-text">你的情绪旅程记录与洞察</p>
+
+        <div class="report-placeholder" id="reportPlaceholder">
+          <p>🌱 还没有足够的对话数据</p>
+          <p>去倾诉几次，心屿会帮你描绘你的岛屿人格画像</p>
+          <button class="btn-primary" onclick="switchTab('chat')">开始倾诉</button>
+        </div>
+
+        <div class="report-content" id="reportContent" style="display:none">
+          <!-- 情绪总览 -->
+          <div class="report-section">
+            <h3>📈 情绪概览</h3>
+            <div class="emotion-chart" id="emotionChart"></div>
+          </div>
+
+          <!-- 情绪时间线 -->
+          <div class="report-section">
+            <h3>⏳ 情绪记录</h3>
+            <div class="timeline" id="timeline"></div>
+          </div>
+
+          <!-- 性格分析 -->
+          <div class="report-section">
+            <h3>🧠 心屿对你的了解</h3>
+            <div id="personalityAnalysis">
+              <p class="soft-text">分析中，请稍候…</p>
+            </div>
+            <button class="btn-primary" id="refreshAnalysisBtn">🔄 更新分析</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== 底部 ========== -->
+  <footer class="footer">
+    <p>心屿 · AI 情绪树洞 · 如果你感到极度不适，请拨打全国心理援助热线：<strong>400-161-9995</strong></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
