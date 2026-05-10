@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const AnalyticsDB = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,6 +13,8 @@ app.use(express.static('public'));
 // 读取 DeepSeek API Key
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+
+let analyticsDB;  // SQLite analytics database, initialized on startup
 
 // 系统提示词 —— 心屿的灵魂
 const SYSTEM_PROMPT = {
@@ -252,6 +255,48 @@ app.post('/api/analyze-personality', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🌊 心屿已启航 → http://localhost:${PORT}`);
+// ============================================
+// 分析数据接口
+// ============================================
+
+// 保存对话分析数据
+app.post('/api/analytics/save', async (req, res) => {
+  try {
+    await analyticsDB.saveSession(req.body);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('保存分析数据失败:', err);
+    res.status(500).json({ error: '保存失败' });
+  }
 });
+
+// 获取分析看板数据
+app.get('/api/analytics/dashboard', async (req, res) => {
+  try {
+    const [overview, emotions, timeline] = await Promise.all([
+      analyticsDB.getOverview(),
+      analyticsDB.getEmotionDistribution(),
+      analyticsDB.getTimeline()
+    ]);
+    res.json({ overview, emotions, timeline });
+  } catch (err) {
+    console.error('查询分析数据失败:', err);
+    res.status(500).json({ error: '查询失败' });
+  }
+});
+
+// ============================================
+// 启动服务
+// ============================================
+
+async function start() {
+  analyticsDB = new AnalyticsDB();
+  await analyticsDB.init();
+  console.log('📊 分析数据库已初始化');
+
+  app.listen(PORT, () => {
+    console.log(`🌊 心屿已启航 → http://localhost:${PORT}`);
+  });
+}
+
+start();

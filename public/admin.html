@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心屿 · 数据看板</title>
+  <style>
+    :root {
+      --primary: #E8977E; --primary-light: #f5d4c4; --primary-dark: #c06a4e;
+      --teal: #7EB8C7; --bg: #FFF5EE; --card: #FFFFFF; --text: #4A3728;
+      --soft: #9E8B7E; --border: #F0E0D4;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'Noto Sans SC', 'PingFang SC', sans-serif;
+      background: var(--bg); color: var(--text); padding: 24px; min-height: 100vh;
+    }
+    .container { max-width: 960px; margin: 0 auto; }
+
+    /* 顶部导航 */
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+    }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header a {
+      color: var(--primary); text-decoration: none; font-size: 14px; padding: 6px 14px;
+      border: 1px solid var(--primary); border-radius: 8px; transition: 0.2s;
+    }
+    .header a:hover { background: var(--primary); color: #fff; }
+    .header .subtitle { font-size: 13px; color: var(--soft); margin-top: 2px; }
+    .header .note { font-size: 12px; color: var(--soft); }
+
+    /* 统计卡片 */
+    .stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card); border-radius: 12px; padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04); text-align: center;
+    }
+    .stat-card .icon { font-size: 24px; margin-bottom: 6px; }
+    .stat-card .num { font-size: 32px; font-weight: 700; color: var(--primary-dark); line-height: 1.2; }
+    .stat-card .num.empty { color: var(--soft); font-weight: 400; font-size: 20px; }
+    .stat-card .label { font-size: 13px; color: var(--soft); margin-top: 4px; }
+
+    /* 区块标题 */
+    .section { margin-bottom: 28px; }
+    .section h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+    /* 情绪水平条形图 */
+    .chart-card {
+      background: var(--card); border-radius: 12px; padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .bar-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-label { width: 56px; font-size: 13px; color: var(--text); flex-shrink: 0; text-align: right; }
+    .bar-track {
+      flex: 1; height: 28px; background: var(--border); border-radius: 14px; overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%; border-radius: 14px; transition: width 0.6s ease; display: flex;
+      align-items: center; padding-left: 10px; font-size: 12px; color: #fff; font-weight: 500;
+      min-width: 0;
+    }
+    .bar-count { font-size: 13px; color: var(--soft); width: 30px; flex-shrink: 0; }
+
+    .emotion-colors {
+      --color-焦虑: #E8977E; --color-悲伤: #7EB8C7; --color-愤怒: #D47A5E;
+      --color-孤独: #A8C9A5; --color-喜悦: #D4A85A; --color-平静: #6BA8C7;
+      --color-迷茫: #C9A8D4; --color-恐惧: #D4A0A0;
+    }
+
+    /* 时间线表格 */
+    .table-wrap {
+      background: var(--card); border-radius: 12px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 12px 16px; background: var(--border); font-weight: 500; color: var(--soft); font-size: 12px; }
+    td { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    .tag {
+      display: inline-block; padding: 2px 10px; border-radius: 10px;
+      font-size: 12px; font-weight: 500;
+    }
+    .tag-焦虑 { background: #FDE8E0; color: #c06a4e; }
+    .tag-悲伤 { background: #E0F0F5; color: #4a8a9a; }
+    .tag-愤怒 { background: #F5D4C0; color: #a85a3e; }
+    .tag-孤独 { background: #E0F0E0; color: #5a8a5a; }
+    .tag-喜悦 { background: #F5ECD0; color: #a8903a; }
+    .tag-平静 { background: #D0E8F0; color: #3a7a8a; }
+    .tag-迷茫 { background: #E8DCF0; color: #8a5a9a; }
+    .tag-恐惧 { background: #F0D8D8; color: #9a5a5a; }
+
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--soft);
+    }
+    .empty-state p { margin-bottom: 8px; }
+    .empty-state .big-icon { font-size: 48px; margin-bottom: 16px; }
+
+    .loading { text-align: center; padding: 40px; color: var(--soft); }
+
+    @media (max-width: 640px) {
+      body { padding: 16px; }
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-card { padding: 14px; }
+      .stat-card .num { font-size: 24px; }
+      .header { flex-direction: column; gap: 8px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>📊 心屿 · 数据看板</h1>
+        <div class="subtitle">所有用户匿名数据汇总 · 不包含个人身份信息</div>
+      </div>
+      <a href="/">← 返回心屿</a>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats" id="stats">
+      <div class="stat-card"><div class="icon">💬</div><div class="num empty">—</div><div class="label">总对话数</div></div>
+      <div class="stat-card"><div class="icon">👤</div><div class="num empty">—</div><div class="label">独立访客</div></div>
+      <div class="stat-card"><div class="icon">📊</div><div class="num empty">—</div><div class="label">平均情绪强度</div></div>
+      <div class="stat-card"><div class="icon">🏆</div><div class="num empty" id="topEmotion">—</div><div class="label">最常见情绪</div></div>
+    </div>
+
+    <!-- 情绪分布 -->
+    <div class="section">
+      <h2>💭 情绪分布</h2>
+      <div class="chart-card" id="emotionChart">
+        <div class="loading">加载中…</div>
+      </div>
+    </div>
+
+    <!-- 时间线 -->
+    <div class="section">
+      <h2>⏳ 最近对话记录</h2>
+      <div class="table-wrap" id="timelineWrap">
+        <div class="loading">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const EMOTION_COLORS = {
+      '焦虑': '#E8977E', '悲伤': '#7EB8C7', '愤怒': '#D47A5E',
+      '孤独': '#A8C9A5', '喜悦': '#D4A85A', '平静': '#6BA8C7',
+      '迷茫': '#C9A8D4', '恐惧': '#D4A0A0',
+    };
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/analytics/dashboard');
+        const data = await res.json();
+
+        if (!data || data.error) {
+          showError(data?.error || '无法加载数据');
+          return;
+        }
+
+        renderStats(data.overview);
+        renderEmotions(data.emotions);
+        renderTimeline(data.timeline);
+      } catch {
+        showError('网络连接失败');
+      }
+    }
+
+    function renderStats(overview) {
+      if (!overview) return;
+
+      const cards = document.querySelectorAll('.stat-card .num');
+      cards[0].textContent = overview.totalSessions || 0;
+      cards[0].classList.remove('empty');
+
+      cards[1].textContent = overview.uniqueVisitors || 0;
+      cards[1].classList.remove('empty');
+
+      cards[2].textContent = overview.avgIntensity ? overview.avgIntensity + '/10' : '—';
+      cards[2].classList.remove('empty');
+
+      const topEl = document.getElementById('topEmotion');
+      topEl.textContent = overview.topEmotion || '暂无数据';
+      topEl.classList.remove('empty');
+    }
+
+    function renderEmotions(emotions) {
+      const container = document.getElementById('emotionChart');
+
+      if (!emotions || emotions.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="big-icon">📭</div><p>暂无情绪数据</p></div>';
+        return;
+      }
+
+      const maxCount = Math.max(...emotions.map(e => e.count));
+
+      container.innerHTML = emotions.map(e => {
+        const pct = maxCount > 0 ? (e.count / maxCount) * 100 : 0;
+        const color = EMOTION_COLORS[e.emotion] || '#E8977E';
+        return `
+          <div class="bar-row">
+            <div class="bar-label">${e.emotion}</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${pct}%;background:${color};${pct < 20 ? 'color:transparent;padding-left:0' : ''}">${e.count}</div>
+            </div>
+            <div class="bar-count">${e.count}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTimeline(timeline) {
+      const wrap = document.getElementById('timelineWrap');
+
+      if (!timeline || timeline.length === 0) {
+        wrap.innerHTML = '<div class="empty-state"><div class="big-icon">📭</div><p>暂无对话记录</p></div>';
+        return;
+      }
+
+      const visitorMap = {};
+      let visitorCounter = 0;
+      function getShortVid(vid) {
+        if (!vid) return '—';
+        if (!visitorMap[vid]) visitorMap[vid] = ++visitorCounter;
+        return '用户' + visitorMap[vid];
+      }
+
+      let html = '<table><thead><tr><th>时间</th><th>情绪</th><th>强度</th><th>消息数</th><th>访客</th></tr></thead><tbody>';
+      timeline.forEach(row => {
+        const tagClass = row.emotion ? `tag-${row.emotion}` : '';
+        html += `<tr>
+          <td>${row.date || '—'}</td>
+          <td>${row.emotion ? `<span class="tag ${tagClass}">${row.emotion}</span>` : '—'}</td>
+          <td>${row.intensity != null ? row.intensity + '/10' : '—'}</td>
+          <td>${row.messages ?? '—'}</td>
+          <td style="font-size:12px;color:var(--soft)">${getShortVid(row.visitor)}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+    }
+
+    function showError(msg) {
+      document.querySelectorAll('.loading').forEach(el => el.textContent = '❌ ' + msg);
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+  </script>
+</body>
+</html>

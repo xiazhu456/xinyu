@@ -53,6 +53,16 @@ function getSessionKey() {
   return 'xinyu_session_' + Date.now();
 }
 
+// 匿名访客 ID（用于分析中统计独立访客）
+function getVisitorId() {
+  let vid = localStorage.getItem('xinyu_visitor_id');
+  if (!vid) {
+    vid = 'v_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    localStorage.setItem('xinyu_visitor_id', vid);
+  }
+  return vid;
+}
+
 // ===== 事件绑定 =====
 function setupEventListeners() {
   // 发送按钮
@@ -290,6 +300,25 @@ async function endChat() {
   state.sessions.push(session);
   state.totalSessions = state.sessions.length;
   saveToStorage();
+
+  // 上报分析数据（静默，不影响用户体验）
+  try {
+    fetch('/api/analytics/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: session.id,
+        date: session.date,
+        primaryEmotion: session.emotion?.primaryEmotion,
+        emotionIntensity: session.emotion?.emotionIntensity,
+        emotionTags: session.emotion?.emotionTags,
+        keyTopics: session.emotion?.keyTopics,
+        suggestion: session.emotion?.suggestion,
+        messageCount: session.messages.length,
+        visitorId: getVisitorId(),
+      })
+    });
+  } catch { /* 上报失败不影响用户 */ }
 
   // 发送温暖结束语
   const endMsgs = [
