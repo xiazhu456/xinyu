@@ -10,6 +10,7 @@ const state = {
   isProcessing: false,           // 是否正在等待 AI 回复
   emotionData: null,             // 当前情绪分析结果
   totalSessions: 0,
+  lastSavedMessageCount: 0,
 };
 
 // ===== DOM 缓存 =====
@@ -30,6 +31,7 @@ function init() {
   loadFromStorage();
   setupEventListeners();
   updatePersonalityTab();
+  window.addEventListener('beforeunload', autoSaveOnClose);
 }
 
 // ===== 本地存储 =====
@@ -88,7 +90,10 @@ function setupEventListeners() {
 function switchTab(tabId) {
   dom.tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   dom.tabContents.forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
-  if (tabId === 'report') updatePersonalityTab();
+  if (tabId === 'report') {
+    autoSaveCurrentSession();
+    updatePersonalityTab();
+  }
   if (tabId === 'chat') setTimeout(scrollToBottom, 100);
 }
 
@@ -268,34 +273,41 @@ async function autoAnalyzeEmotion() {
   } catch { /* 静默失败，不影响对话 */ }
 }
 
-// ===== 结束对话 =====
-async function endChat() {
-  if (!state.currentSessionId || state.messages.length === 0) return;
+// ===== 自动保存当前对话（静默，不打断用户） =====
+async function autoSaveCurrentSession() {
+  if (!state.currentSessionId || state.messages.length === 0) return null;
 
-  // 获取最终情绪分析
-  let finalEmotion = null;
+  // 避免重复保存（消息未变化时跳过）
+  if (state.lastSavedMessageCount === state.messages.length) return null;
+
+  // 获取情绪分析（静默，使用缓存或重新请求）
+  let emotion = state.emotionData;
   try {
     const res = await fetch('/api/analyze-emotion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: state.messages })
     });
-    finalEmotion = await res.json();
+    const data = await res.json();
+    if (data && data.primaryEmotion) emotion = data;
   } catch {}
 
-  // 保存对话记录
+  // 替换已有同 ID 的记录，避免重复
+  state.sessions = state.sessions.filter(s => s.id !== state.currentSessionId);
+
   const session = {
     id: state.currentSessionId,
     date: new Date().toISOString(),
     messages: [...state.messages],
-    emotion: finalEmotion || state.emotionData,
+    emotion,
   };
 
   state.sessions.push(session);
   state.totalSessions = state.sessions.length;
+  state.lastSavedMessageCount = state.messages.length;
   saveToStorage();
 
-  // 上报分析数据（静默，不影响用户体验）
+  // 上报分析数据
   try {
     fetch('/api/analytics/save', {
       method: 'POST',
@@ -314,6 +326,48 @@ async function endChat() {
     });
   } catch { /* 上报失败不影响用户 */ }
 
+  return session;
+}
+
+// ===== 关闭页面时自动保存 =====
+function autoSaveOnClose() {
+  if (!state.currentSessionId || state.messages.length === 0) return;
+
+  // 替换已有同 ID 的记录
+  state.sessions = state.sessions.filter(s => s.id !== state.currentSessionId);
+
+  const session = {
+    id: state.currentSessionId,
+    date: new Date().toISOString(),
+    messages: [...state.messages],
+    emotion: state.emotionData,
+  };
+
+  state.sessions.push(session);
+  state.totalSessions = state.sessions.length;
+  saveToStorage();
+
+  // sendBeacon 可在页面关闭后可靠发送
+  const payload = JSON.stringify({
+    id: session.id,
+    date: session.date,
+    primaryEmotion: session.emotion?.primaryEmotion,
+    emotionIntensity: session.emotion?.emotionIntensity,
+    emotionTags: session.emotion?.emotionTags,
+    keyTopics: session.emotion?.keyTopics,
+    suggestion: session.emotion?.suggestion,
+    messageCount: session.messages.length,
+    visitorId: getVisitorId(),
+  });
+  navigator.sendBeacon('/api/analytics/save', payload);
+}
+
+// ===== 结束对话 =====
+async function endChat() {
+  if (!state.currentSessionId || state.messages.length === 0) return;
+
+  await autoSaveCurrentSession();
+
   // 发送温暖结束语
   const endMsgs = [
     '感谢你今天的分享 🍵 记住，无论什么时候需要，心屿都在这里。',
@@ -326,6 +380,7 @@ async function endChat() {
   state.messages = [];
   state.currentSessionId = null;
   state.emotionData = null;
+  state.lastSavedMessageCount = 0;
   dom.endChatBtn.style.display = 'none';
 
   // 延迟后添加新对话起始消息
