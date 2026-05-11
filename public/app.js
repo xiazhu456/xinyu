@@ -21,8 +21,6 @@ const dom = {
   userInput: $('#userInput'),
   sendBtn: $('#sendBtn'),
   endChatBtn: $('#endChatBtn'),
-  emotionBar: $('#emotionBar'),
-  currentEmotion: $('#currentEmotion'),
   tabs: $$('.tab'),
   tabContents: $$('.tab-content'),
 };
@@ -254,11 +252,9 @@ function scrollToBottom() {
   dom.messages.scrollTop = dom.messages.scrollHeight;
 }
 
-// ===== 情绪分析 =====
+// 情绪分析（后台运行，不在聊天中展示）
 async function autoAnalyzeEmotion() {
-  // 每 3 条消息分析一次情绪
   if (state.messages.length < 2 || state.messages.length % 2 !== 0) return;
-
   try {
     const res = await fetch('/api/analyze-emotion', {
       method: 'POST',
@@ -268,8 +264,6 @@ async function autoAnalyzeEmotion() {
     const data = await res.json();
     if (data && data.primaryEmotion) {
       state.emotionData = data;
-      dom.emotionBar.style.display = 'flex';
-      dom.currentEmotion.textContent = `${data.primaryEmotion}${data.emotionIntensity ? ' · ' + data.emotionIntensity + '/10' : ''}`;
     }
   } catch { /* 静默失败，不影响对话 */ }
 }
@@ -332,7 +326,6 @@ async function endChat() {
   state.messages = [];
   state.currentSessionId = null;
   state.emotionData = null;
-  dom.emotionBar.style.display = 'none';
   dom.endChatBtn.style.display = 'none';
 
   // 延迟后添加新对话起始消息

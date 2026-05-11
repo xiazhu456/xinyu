@@ -203,20 +203,7 @@ html, body {
   30% { opacity: 1; transform: scale(1.2); }
 }
 
-/* Emotion bar */
-.emotion-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--bg-soft);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  color: var(--text-soft);
-  margin-bottom: 8px;
-}
-
-/* ----- Input Area ----- */
+/* Input Area */
 .input-area {
   padding-top: 12px;
   border-top: 1px solid var(--border);
