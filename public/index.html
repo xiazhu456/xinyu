@@ -95,6 +95,17 @@
 
   </main>
 
+  <!-- ========== 对话记录弹窗 ========== -->
+  <div class="modal-overlay" id="historyModal" style="display:none" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modalTitle">对话记录</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
   <!-- ========== 底部 ========== -->
   <footer class="footer">
     <p>心屿 · AI 情绪树洞 · 如果你感到极度不适，请拨打全国心理援助热线：<strong>400-161-9995</strong></p>

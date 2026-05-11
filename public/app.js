@@ -424,6 +424,7 @@ function renderTimeline() {
 
     const item = document.createElement('div');
     item.className = 'timeline-item';
+    item.title = '点击查看完整对话';
 
     const dateEl = document.createElement('div');
     dateEl.className = 'timeline-date';
@@ -440,6 +441,7 @@ function renderTimeline() {
 
     item.appendChild(dateEl);
     item.appendChild(content);
+    item.addEventListener('click', () => showConversationDetail(s));
     timeline.appendChild(item);
   });
 }
@@ -545,6 +547,41 @@ dom.userInput.addEventListener('input', autoResizeInput);
 function autoResizeInput() {
   dom.userInput.style.height = 'auto';
   dom.userInput.style.height = Math.min(dom.userInput.scrollHeight, 120) + 'px';
+}
+
+// ===== 对话记录弹窗 =====
+function showConversationDetail(session) {
+  const modal = document.getElementById('historyModal');
+  const title = document.getElementById('modalTitle');
+  const body = document.getElementById('modalBody');
+
+  const date = new Date(session.date);
+  const dateStr = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+  const emotion = session.emotion?.primaryEmotion || '未识别';
+  const intensity = session.emotion?.emotionIntensity ? ` · 强度 ${session.emotion.emotionIntensity}/10` : '';
+
+  title.textContent = '💬 对话回顾';
+
+  let html = `<div class="modal-meta"><span>${dateStr}</span><span>情绪 · ${emotion}${intensity}</span></div>`;
+
+  session.messages.forEach(m => {
+    const role = m.role === 'user' ? 'user' : 'ai';
+    const avatar = m.role === 'user' ? '💝' : '🏝️';
+    const formatted = m.content.split('\n').filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
+    html += `<div class="history-msg ${role}">
+      <div class="h-avatar">${avatar}</div>
+      <div class="h-bubble">${formatted}</div>
+    </div>`;
+  });
+
+  body.innerHTML = html;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('historyModal').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 // ===== 启动 =====
